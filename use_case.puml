@@ -1,0 +1,46 @@
+@startuml MUSTHub_UseCase_Diagram
+left to right direction
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+}
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #000000
+}
+
+actor "Guest User" as Guest
+actor "Registered Student User" as User
+
+rectangle "MUSTHub" {
+  usecase "Board Browsing" as UC1
+  usecase "Post Creation" as UC2
+  usecase "Post Reply" as UC3
+  usecase "Post Voting" as UC4
+  usecase "Post Ranking" as UC5
+  usecase "Account Registration" as UC6
+  usecase "Login & Logout" as UC7
+  usecase "Personal Centre" as UC8
+  usecase "Favourite Posts" as UC9
+  usecase "Post Report" as UC10
+  usecase "Sensitive Word Filtering" as UC11
+}
+
+Guest --> UC1
+Guest --> UC5
+Guest --> UC6
+
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC7
+User --> UC8
+User --> UC9
+User --> UC10
+
+UC2 ..> UC11 : <<include>>
+UC3 ..> UC11 : <<include>>
+UC5 ..> UC1 : <<extend>>
+@enduml
