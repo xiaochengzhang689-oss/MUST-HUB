@@ -1,0 +1,57 @@
+@startuml
+skinparam shadowing false
+skinparam dpi 170
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 160
+skinparam ParticipantPadding 14
+skinparam BoxPadding 10
+hide footbox
+autonumber
+actor "Guest User" as G
+actor "Registered Student User" as R
+participant ":MUSTHub System" as S
+participant ":User" as U
+participant ":Local File System" as F
+
+alt action = login
+  G -> S : selectLogin()
+  S --> G : promptCredentials()
+  G -> S : submitCredentials(username, password)
+  S -> S : checkLockStatus(username)
+  alt account is locked
+    S --> G : showError(accountLocked)
+  else account is not locked
+    S -> F : readAccountData()
+    F --> S : accountData / fileReadError
+    alt fileReadError
+      S --> G : showError(accountFileUnreadable)
+    else accountData loaded
+      S -> U : verifyCredentials(username, password)
+      U --> S : verifyResult
+      alt verification fails
+        S -> S : recordFailedAttempt(username)
+        opt 5 consecutive failures on this account
+          S -> S : lockAccount(username, 5 minutes)
+        end
+        S --> G : showError(loginFailed)
+      else verification succeeds
+        S -> S : resetFailedAttempts(username)
+        S -> S : establishSession(username)
+        S --> G : showWelcome(username)
+      end
+    end
+  end
+else action = logout
+  R -> S : selectLogout()
+  S -> S : checkLoginStatus()
+  note right : returns loggedIn and username
+  alt loggedIn = false (guest)
+    S --> R : showError(notLoggedIn)
+  else loggedIn = true
+    S -> S : clearSession()
+    S --> R : showLogoutSuccess()
+  end
+end
+@enduml

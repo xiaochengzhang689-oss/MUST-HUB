@@ -1,0 +1,56 @@
+@startuml
+skinparam shadowing false
+skinparam dpi 170
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 160
+skinparam ParticipantPadding 14
+skinparam BoxPadding 10
+hide footbox
+autonumber
+actor "Registered Student User" as R
+participant ":MUSTHub System" as S
+participant ":Favourite" as FV
+participant ":Local File System" as F
+
+R -> S : toggleFavourite(postId)
+S -> S : checkLoginStatus()
+note right : returns loggedIn and username
+alt loggedIn = false
+  S --> R : showError(loginRequired)
+else loggedIn = true
+  S -> F : readPostData()
+  F --> S : postData / fileReadError
+  alt fileReadError
+    S --> R : showError(postDataUnreadable)
+  else postData loaded
+    S -> S : findPost(postId)
+    alt post does not exist
+      S --> R : showError(postNotFound)
+    else post exists
+      S -> F : readFavouriteRecords()
+      F --> S : favouriteList / fileReadError
+      alt fileReadError
+        S --> R : showError(favouriteDataUnreadable)
+      else favouriteList loaded
+        S -> S : findFavourite(username, postId)
+        alt not yet favourited
+          S -> FV : create(postId, username, savedAt)
+          FV --> S : favObj
+          S -> F : saveFavouriteRecords(favObj)
+          F --> S : saveResult / fileWriteError
+        else already favourited
+          S -> F : deleteFavouriteRecord(favObj)
+          F --> S : deleteResult / fileWriteError
+        end
+        alt fileWriteError
+          S --> R : showError(favouriteNotSaved)
+        else saved
+          S --> R : showFeedback(favouriteAdded or favouriteRemoved)
+        end
+      end
+    end
+  end
+end
+@enduml

@@ -1,0 +1,58 @@
+@startuml
+' Figure 4‑3 Sequence diagram for Use Case 3: Post Reply
+actor "Registered Student User" as RSU
+participant "MUSTHub System" as S
+participant "u1 : User" as U
+participant "p1 : Post" as P1
+participant "r_new : Reply" as RNEW
+participant "Local File System" as LFS
+
+RSU -> S : replyToPost(postId)
+activate S
+
+S -> U : checkLoginStatus()
+activate U
+alt [loggedIn == false]
+S -> S : reject operation, show prompt
+deactivate S
+else [loggedIn == true]
+U --> S : loggedIn = true
+deactivate U
+
+S -> LFS : readPostData()
+activate LFS
+LFS --> S : target post record
+deactivate LFS
+
+S -> RSU : requestReplyText()
+RSU --> S : reply‑text
+
+S -> S : validateNotEmpty(reply‑text)
+note over S : <<include>> Sensitive Word Filtering
+S -> S : sensitiveWordCheck()
+
+alt [empty reply]
+S -> S : prompt for re‑input
+else [sensitive word hit]
+S -> S : show matched keyword, store nothing
+else [check pass]
+S -> RNEW : createReplyObj()
+S -> LFS : saveReplyData(replyObj)
+activate LFS
+LFS --> S : acknowledge save success
+deactivate LFS
+
+S -> P1 : replyCount +=1 ; lastActivityAt = now
+note over P1 : If p1.status = DOWNGRADED\n  reportCount <3 → T3 set VISIBLE\n  reportCount ≥3 → T5 set FLAGGED\n  call savePostData(postObj) to persist
+S --> RSU : show success feedback
+end alt
+end alt
+
+' Exception
+alt [fileReadError]
+S -> S : show error message, abort this reply
+else [fileWriteError]
+S -> S : show error prompt;\nreplyCount and post status remain unchanged
+end alt
+deactivate S
+@enduml

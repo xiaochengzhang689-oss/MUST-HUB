@@ -1,0 +1,54 @@
+@startuml
+' Figure 4‑1 Sequence diagram for Use Case 1: Board Browsing
+actor "Guest User" as GU
+actor "Registered Student User" as RSU
+participant "MUSTHub System" as S
+participant "b1 : Board" as B
+participant "p* : Post" as P
+participant "Local File System" as LFS
+
+alt [Actor is Guest User]
+GU -> S : browseBoard(boardId, pageNumber)
+activate S
+else [Actor is Registered Student User]
+RSU -> S : browseBoard(boardId, pageNumber)
+activate S
+end alt
+
+S -> LFS : readBoardConfig()
+activate LFS
+LFS --> S : board record
+deactivate LFS
+
+S -> LFS : readPostData()
+activate LFS
+LFS --> S : list of post records
+deactivate LFS
+
+loop iterate over post records
+alt [post.status = DOWNGRADED]
+S -> P : drop this post
+else [post.status = FLAGGED]
+S -> P : keep post, mark as flagged
+else [post.status = VISIBLE]
+S -> P : keep post
+end alt
+end loop
+
+S -> S : sortByLastActivityAt()
+S -> S : paginate()
+
+alt [Actor is Guest User]
+S --> GU : paginated post list
+else [Actor is Registered Student User]
+S --> RSU : paginated post list
+end alt
+deactivate S
+
+' Exception branches
+alt [fileReadError]
+S -> S : show error prompt, keep application running
+else [board not found OR page number out‑of‑range]
+S -> S : show prompt, retain previous menu view
+end alt
+@enduml

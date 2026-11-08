@@ -1,0 +1,63 @@
+@startuml
+skinparam shadowing false
+skinparam dpi 170
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 160
+skinparam ParticipantPadding 14
+skinparam BoxPadding 10
+hide footbox
+autonumber
+actor "Registered Student User" as R
+participant ":MUSTHub System" as S
+participant ":Report" as RPT
+participant ":Post" as P
+participant ":Local File System" as F
+
+R -> S : reportPost(postId)
+S -> S : checkLoginStatus()
+note right : returns loggedIn and username
+alt loggedIn = false
+  S --> R : showError(loginRequired)
+else loggedIn = true
+  S -> F : readPostData()
+  F --> S : postData / fileReadError
+  alt fileReadError or post not found
+    S --> R : showError(postUnavailable)
+  else post found
+    S -> F : readReportRecords()
+    F --> S : reportList / fileReadError
+    alt fileReadError
+      S --> R : showError(reportDataUnreadable)
+    else reportList loaded
+      S -> S : checkDuplicateReport(username, postId)
+      alt already reported by this user
+        S --> R : showError(alreadyReported)
+      else first report by this user
+        S -> RPT : create(postId, username, createdAt)
+        RPT --> S : reportObj
+        S -> F : saveReportRecords(reportObj)
+        F --> S : saveResult / fileWriteError
+        alt fileWriteError
+          S --> R : showError(reportNotSaved)
+        else report saved
+          S -> P : increaseReportCount()
+          P --> S : reportCount
+          opt reportCount >= threshold
+            S -> P : setStatus(FLAGGED)
+            note right : FLAGGED only removes the post\nfrom the Hot ranking
+          end
+          S -> F : savePostData(postObj)
+          F --> S : saveResult / fileWriteError
+          alt fileWriteError
+            S --> R : showError(postNotUpdated)
+          else post updated
+            S --> R : showFeedback(reportSubmitted, plus postFlagged if flagged)
+          end
+        end
+      end
+    end
+  end
+end
+@enduml

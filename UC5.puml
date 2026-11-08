@@ -1,0 +1,44 @@
+@startuml
+' Figure 4‑5 Sequence diagram for Use Case 5: Post Ranking
+actor "Guest User" as GU
+actor "Registered Student User" as RSU
+participant "MUSTHub System" as S
+participant "b1 : Board" as B
+participant "p* : Post" as P
+participant "Local File System" as LFS
+
+alt [Actor is Guest User]
+GU -> S : selectSortMode(mode)
+activate S
+else [Actor is Registered Student User]
+RSU -> S : selectSortMode(mode)
+activate S
+end alt
+
+S -> LFS : readPostData()
+activate LFS
+LFS --> S : list of post records
+deactivate LFS
+
+alt [mode = Latest]
+S -> P : drop DOWNGRADED, keep VISIBLE / FLAGGED
+S -> S : sort by lastActivityAt DESC
+else [mode = Hot]
+S -> P : drop DOWNGRADED AND FLAGGED
+S -> S : sort by popularity score(score, replyCount, time‑decay)
+else [invalid mode]
+S -> S : keep current order, fall back to Latest
+end alt
+
+alt [Actor is Guest User]
+S --> GU : sorted post list
+else [Actor is Registered Student User]
+S --> RSU : sorted post list
+end alt
+
+' Exception
+alt [fileReadError]
+S -> S : show error prompt, keep previous post list
+end alt
+deactivate S
+@enduml

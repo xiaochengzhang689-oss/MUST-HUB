@@ -1,0 +1,77 @@
+@startuml
+' Figure 4‑4 Sequence diagram for Use Case 4: Post Voting
+actor "Registered Student User" as RSU
+participant "MUSTHub System" as S
+participant "u1 : User" as U
+participant "p1 : Post" as P1
+participant "v1 : Vote" as V1
+participant "Local File System" as LFS
+
+RSU -> S : vote(postId, voteDirection)
+activate S
+
+S -> U : checkLoginStatus()
+activate U
+alt [loggedIn == false]
+S -> S : reject operation, show prompt
+deactivate S
+else [loggedIn == true]
+U --> S : loggedIn = true
+deactivate U
+
+S -> LFS : readPostData()
+activate LFS
+LFS --> S : target post record
+deactivate LFS
+
+S -> LFS : readVoteData()
+activate LFS
+LFS --> S : existing vote record
+deactivate LFS
+
+
+alt [existingVote exists AND voteDirection == existingVote.value]
+S -> LFS : deleteVoteData(voteObj)
+activate LFS
+LFS --> S : ack
+deactivate LFS
+else [existingVote exists AND voteDirection != existingVote.value]
+S -> V1 : switch Vote.value
+S -> LFS : saveVoteData(voteObj)
+activate LFS
+LFS --> S : ack
+deactivate LFS
+else [no existingVote]
+S -> V1 : createVoteObj(value = ±1)
+S -> LFS : saveVoteData(voteObj)
+activate LFS
+LFS --> S : ack
+deactivate LFS
+end alt
+
+S -> S : recalculate post.score = sum(Vote.value)
+
+alt [post.score reaches the downgrade threshold AND post.status == VISIBLE]
+S -> P1 : set status = DOWNGRADED
+note over P1 : T2 transition
+S -> LFS : savePostData(postObj)
+activate LFS
+LFS --> S : ack
+deactivate LFS
+else
+S -> S : no state change
+end alt
+
+S --> RSU : return updated net score
+end alt
+
+' Exception
+alt [fileReadError]
+S -> S : show error message, abort this vote
+else [fileWriteError]
+S -> S : show error; NO partial score / status update
+else [target post not found]
+S -> S : reject operation, show explicit prompt
+end alt
+deactivate S
+@enduml

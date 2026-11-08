@@ -1,0 +1,44 @@
+@startuml
+skinparam shadowing false
+skinparam dpi 170
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 160
+skinparam ParticipantPadding 14
+skinparam BoxPadding 10
+hide footbox
+autonumber
+actor "Guest User" as G
+participant ":MUSTHub System" as S
+participant ":User" as U
+participant ":Local File System" as F
+
+G -> S : selectRegister()
+S --> G : promptCredentials()
+G -> S : submitCredentials(username, password)
+alt username or password is empty
+  S --> G : showError(emptyInput)
+else input is valid
+  S -> F : readAccountData()
+  F --> S : accountData / fileReadError
+  alt fileReadError
+    S --> G : showError(accountFileUnreadable)
+  else accountData loaded
+    S -> S : checkDuplicate(username)
+    alt username already exists
+      S --> G : showError(usernameExists)
+    else username is unique
+      S -> U : create(username, password, createdAt, tags = empty)
+      U --> S : userObj
+      S -> F : saveAccountData(userObj)
+      F --> S : saveResult / fileWriteError
+      alt fileWriteError
+        S --> G : showError(accountNotSaved)
+      else account saved
+        S --> G : showSuccess(registrationDone)
+      end
+    end
+  end
+end
+@enduml

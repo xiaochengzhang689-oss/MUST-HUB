@@ -1,0 +1,49 @@
+@startuml
+skinparam shadowing false
+skinparam dpi 170
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 160
+skinparam ParticipantPadding 14
+skinparam BoxPadding 10
+hide footbox
+autonumber
+actor "Registered Student User" as R
+participant ":MUSTHub System" as S
+participant ":User" as U
+participant ":Post" as P
+participant ":Reply" as RP
+participant ":Favourite" as FV
+participant ":Local File System" as F
+
+R -> S : openPersonalCentre()
+S -> S : checkLoginStatus()
+note right : returns loggedIn and username
+alt loggedIn = false
+  S --> R : showError(loginRequired)
+else loggedIn = true
+  S -> F : readAccountData()
+  F --> S : accountData
+  S -> F : readPostData()
+  F --> S : postData
+  S -> F : readReplyData()
+  F --> S : replyData
+  S -> F : readFavouriteRecords()
+  F --> S : favouriteList
+  alt any read returns fileReadError
+    S --> R : showError(dataUnreadable)
+  else all data loaded
+    S -> U : getTags(username)
+    U --> S : tags
+    S -> P : findByAuthor(username)
+    P --> S : myPosts
+    S -> RP : findByAuthor(username)
+    RP --> S : myReplies
+    S -> FV : findByUser(username)
+    FV --> S : myFavourites
+    S --> R : displayPersonalCentre(tags, myPosts, myReplies, myFavourites)
+    note right : an empty category shows emptyHint
+  end
+end
+@enduml

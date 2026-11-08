@@ -1,0 +1,54 @@
+@startuml
+' Figure 4‑2 Sequence diagram for Use Case 2: Post Creation
+actor "Registered Student User" as RSU
+participant "MUSTHub System" as S
+participant "u1 : User" as U
+participant "b1 : Board" as B
+participant "p_new : Post" as PNEW
+participant "Local File System" as LFS
+
+RSU -> S : createPost()
+activate S
+
+S -> U : checkLoginStatus()
+activate U
+alt [loggedIn == false]
+S -> S : reject operation, show prompt
+deactivate S
+else [loggedIn == true]
+U --> S : loggedIn = true
+deactivate U
+
+S -> LFS : readBoardConfig()
+activate LFS
+LFS --> S : board record
+deactivate LFS
+
+S -> RSU : requestTitleAndBodyText()
+RSU --> S : title, body
+
+S -> S : validateNotEmpty(title, body)
+note over S : <<include>> Sensitive Word Filtering
+S -> S : sensitiveWordCheck()
+
+alt [empty input]
+S -> S : prompt user to re‑input
+else [sensitive word hit]
+S -> S : show matched keyword, abort saving
+else [validation pass]
+S -> PNEW : createPostObj()
+note over PNEW : T1: status = VISIBLE, score = 0,\nreplyCount=0, reportCount=0,\nauthorId = username
+S -> LFS : savePostData(postObj)
+activate LFS
+LFS --> S : acknowledge save success
+deactivate LFS
+S --> RSU : show success feedback
+end alt
+end alt
+
+' Exception
+alt [fileWriteError]
+S -> S : show error prompt, no data persisted
+end alt
+deactivate S
+@enduml
